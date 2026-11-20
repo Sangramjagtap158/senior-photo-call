@@ -12,37 +12,34 @@ jobs:
       - name: Checkout your code
         uses: actions/checkout@v4
 
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-      - name: Create standard Flutter folders if missing
+      - name: Create clean Flutter project & apply custom files
         run: |
-          if [ ! -d "android" ]; then
-            mkdir -p /tmp/flutter_init
-            flutter create /tmp/flutter_init --org com.example.seniorcall --project-name senior_photo_call
-            cp -rn /tmp/flutter_init/* .
-            cp -rn /tmp/flutter_init/.gitignore . 2>/dev/null || true
+          flutter create /tmp/app --org com.example.seniorcall --project-name senior_photo_call
+          if [ -f "custom_app/pubspec.yaml" ]; then
+            cp custom_app/pubspec.yaml /tmp/app/pubspec.yaml
           fi
-
-      - name: Restore your custom files
-        run: |
-          if [ -d "custom_app" ]; then
-            cp custom_app/pubspec.yaml ./pubspec.yaml
-            mkdir -p ./lib
-            cp custom_app/main.dart ./lib/main.dart
+          if [ -f "custom_app/main.dart" ]; then
+            mkdir -p /tmp/app/lib
+            cp custom_app/main.dart /tmp/app/lib/main.dart
           fi
-
-      - name: Get packages
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --debug
+          cd /tmp/app
+          flutter pub get
+          flutter build apk --debug
 
       - name: Upload APK for download
         uses: actions/upload-artifact@v4
         with:
           name: senior-photo-call-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: /tmp/app/build/app/outputs/flutter-apk/app-debug.apk
