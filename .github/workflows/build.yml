@@ -35,13 +35,29 @@ jobs:
             cp custom_app/main.dart /tmp/app/lib/main.dart
           fi
           python3 -c '
-          p = "/tmp/app/android/build.gradle"
-          with open(p, "r") as f:
+          import re
+
+          sg = "/tmp/app/android/settings.gradle"
+          with open(sg, "r") as f:
               s = f.read()
-          if "ext.kotlin_version" not in s:
-              s = s.replace("buildscript {", "buildscript {\n    ext.kotlin_version = '\''1.9.24'\''", 1)
-          with open(p, "w") as f:
+          s = re.sub(
+              r"(id\s+[\"'\'']org\.jetbrains\.kotlin\.android[\"'\'']\s+version\s+[\"'\''])[^\"'\'']+([\"'\''])",
+              r"\g<1>2.0.21\g<2>",
+              s,
+          )
+          with open(sg, "w") as f:
               f.write(s)
+
+          bg = "/tmp/app/android/build.gradle"
+          with open(bg, "r") as f:
+              b = f.read()
+          b = re.sub(
+              r"(ext\.kotlin_version\s*=\s*[\"'\''])[^\"'\'']+([\"'\''])",
+              r"\g<1>2.0.21\g<2>",
+              b,
+          )
+          with open(bg, "w") as f:
+              f.write(b)
           '
           cd /tmp/app
           flutter pub get
