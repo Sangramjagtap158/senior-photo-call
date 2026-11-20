@@ -34,6 +34,15 @@ jobs:
             mkdir -p /tmp/app/lib
             cp custom_app/main.dart /tmp/app/lib/main.dart
           fi
+          python3 -c '
+          p = "/tmp/app/android/build.gradle"
+          with open(p, "r") as f:
+              s = f.read()
+          if "ext.kotlin_version" not in s:
+              s = s.replace("buildscript {", "buildscript {\n    ext.kotlin_version = '\''1.9.24'\''", 1)
+          with open(p, "w") as f:
+              f.write(s)
+          '
           cd /tmp/app
           flutter pub get
           flutter build apk --debug
