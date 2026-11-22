@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -70,6 +72,8 @@ class PhotoCallScreen extends StatefulWidget {
 
 class _PhotoCallScreenState extends State<PhotoCallScreen> {
   static const String _storageKey = 'saved_senior_contacts_v1';
+  static const MethodChannel _callChannel =
+      MethodChannel('com.example.seniorcall/direct_call');
 
   final PageController _pageController = PageController();
   final ImagePicker _picker = ImagePicker();
@@ -143,21 +147,34 @@ class _PhotoCallScreenState extends State<PhotoCallScreen> {
   }
 
   Future<void> _makePhoneCall(BuildContext context, ContactCardData person) async {
-    final Uri telUri = Uri(scheme: 'tel', path: person.phoneNumber.trim());
-    try {
-      final bool launched = await launchUrl(telUri);
-      if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open dialer for ${person.name}')),
-        );
+    final cleanedNumber = person.phoneNumber.trim();
+    if (cleanedNumber.isEmpty) return;
+
+    final status = await Permission.phone.request();
+
+    if (status.isGranted) {
+      try {
+        await _callChannel.invokeMethod('makeDirectCall', {
+          'phone': cleanedNumber,
+        });
+        return;
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Direct call failed ($e), opening dialer...')),
+          );
+        }
       }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error starting call: $e')),
-        );
-      }
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Allow Phone permission to call directly without dialer.'),
+        ),
+      );
     }
+
+    final Uri telUri = Uri(scheme: 'tel', path: cleanedNumber);
+    await launchUrl(telUri);
   }
 
   void _goToPage(int newIndex) {
