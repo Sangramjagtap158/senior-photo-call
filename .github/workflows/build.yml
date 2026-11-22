@@ -58,6 +58,15 @@ jobs:
           )
           with open(bg, "w") as f:
               f.write(b)
+
+          m = "/tmp/app/android/app/src/main/AndroidManifest.xml"
+          with open(m, "r") as f:
+              txt = f.read()
+          perm = "<uses-permission android:name=\"android.permission.CALL_PHONE\"/>\n    "
+          if "CALL_PHONE" not in txt:
+              txt = txt.replace("<application", perm + "<application", 1)
+          with open(m, "w") as f:
+              f.write(txt)
           '
           cd /tmp/app
           flutter pub get
