@@ -1,14 +1,22 @@
 name: senior_photo_call
-description: A simple photo calling app for grandparents.
+description: A simplified photo-based calling app for seniors.
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  url_launcher: ^6.3.1
+  url_launcher: ^6.3.0
+  image_picker: ^1.1.2
+  shared_preferences: ^2.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true
