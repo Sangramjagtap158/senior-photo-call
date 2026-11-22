@@ -35,7 +35,7 @@ jobs:
             cp custom_app/main.dart /tmp/app/lib/main.dart
           fi
           python3 -c '
-          import re
+          import glob, os, re
 
           sg = "/tmp/app/android/settings.gradle"
           with open(sg, "r") as f:
@@ -67,6 +67,52 @@ jobs:
               txt = txt.replace("<application", perm + "<application", 1)
           with open(m, "w") as f:
               f.write(txt)
+
+          kt_files = glob.glob("/tmp/app/android/app/src/main/kotlin/**/MainActivity.kt", recursive=True)
+          if kt_files:
+              kt_path = kt_files[0]
+              with open(kt_path, "r") as f:
+                  src = f.read()
+              pkg_match = re.search(r"^\s*package\s+([^\s;]+)", src, re.M)
+              pkg = pkg_match.group(1) if pkg_match else "com.example.seniorcall"
+              new_kt = f"""package {pkg}
+
+import android.content.Intent
+import android.net.Uri
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
+
+class MainActivity : FlutterActivity() {{
+    private val CHANNEL = "com.example.seniorcall/direct_call"
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {{
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {{ call, result ->
+            if (call.method == "makeDirectCall") {{
+                val phone = call.argument<String>("phone")?.trim() ?: ""
+                if (phone.isEmpty()) {{
+                    result.error("INVALID_NUMBER", "Phone number is empty", null)
+                    return@setMethodCallHandler
+                }}
+                try {{
+                    val intent = Intent(Intent.ACTION_CALL).apply {{
+                        data = Uri.parse("tel:$phone")
+                    }}
+                    startActivity(intent)
+                    result.success(true)
+                }} catch (e: Exception) {{
+                    result.error("CALL_FAILED", e.message, null)
+                }}
+            }} else {{
+                result.notImplemented()
+            }}
+        }}
+    }}
+}}
+"""
+              with open(kt_path, "w") as f:
+                  f.write(new_kt)
           '
           cd /tmp/app
           flutter pub get
